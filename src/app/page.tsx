@@ -538,6 +538,32 @@ function ResultScreen({
   const [aiSections, setAiSections] = useState<AISections | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState(false);
+  const [pageIndex, setPageIndex] = useState(0);
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+
+  // Build pages list
+  const pages: string[] = ['intro', 'attachment'];
+  if (!unlocked) {
+    pages.push('paywall');
+  } else {
+    pages.push('affection', 'firstMessage', 'sleep', 'hungry', 'planner', 'responseTime', 'heatmap', 'trend', 'temperature', 'topWords', 'leftOnRead', 'ai');
+    if (userQuestion) pages.push('customAnswer');
+  }
+
+  const totalPages = pages.length;
+  const goNext = () => setPageIndex((i) => Math.min(i + 1, totalPages - 1));
+  const goPrev = () => setPageIndex((i) => Math.max(i - 1, 0));
+
+  const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
+  const handleTouchMove = (e: React.TouchEvent) => { touchEndX.current = e.touches[0].clientX; };
+  const handleTouchEnd = () => {
+    const diff = touchStartX.current - touchEndX.current;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) goNext();
+      else goPrev();
+    }
+  };
 
   useEffect(() => {
     if (!unlocked) return;
@@ -546,7 +572,6 @@ function ResultScreen({
 
     const fetchAI = async () => {
       try {
-        // Build sample messages (evenly spaced, max 60)
         const step = Math.max(1, Math.floor(chatMessages.length / 60));
         const sampled = chatMessages.filter((_, i) => i % step === 0).slice(0, 60);
         const sampleText = sampled
@@ -614,10 +639,38 @@ function ResultScreen({
     fetchAI();
   }, [unlocked]);
 
+  const currentPage = pages[pageIndex];
+
   return (
-    <div ref={scrollRef} className="min-h-screen bg-white">
-      <div className="max-w-md mx-auto px-5 py-12">
-      {/* Intro */}
+    <div
+      ref={scrollRef}
+      className="h-screen bg-white overflow-hidden flex flex-col"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Top bar: page indicator */}
+      <div className="flex-shrink-0 px-5 pt-4 pb-2">
+        <div className="flex items-center justify-between max-w-md mx-auto">
+          <p className="text-xs text-gray-400">{pageIndex + 1} / {totalPages}</p>
+          <p className="text-xs font-bold text-gray-900">
+            <span className="text-pink-500">{a}</span>
+            <span className="text-gray-300 mx-1">vs</span>
+            <span className="text-purple-500">{b}</span>
+          </p>
+          <div className="flex gap-1">
+            {pages.map((_, i) => (
+              <div key={i} className={`w-1.5 h-1.5 rounded-full transition-colors ${i === pageIndex ? 'bg-pink-400' : 'bg-gray-200'}`} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Content area */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-md mx-auto px-5 py-6">
+
+      {currentPage === 'intro' && (
       <FadeIn>
         <div className="text-center mb-10">
           <span className="inline-block text-xs font-bold text-pink-500 bg-pink-50 px-3 py-1 rounded-full mb-4">ANALYSIS COMPLETE</span>
@@ -636,37 +689,13 @@ function ResultScreen({
               <p className="text-xs text-gray-400">일간</p>
             </div>
           </div>
+          <p className="text-gray-400 text-sm mt-8">← 스와이프하거나 버튼을 눌러 넘기세요 →</p>
         </div>
       </FadeIn>
-
-      {/* 앞선 질문에 대한 답변 */}
-      {userQuestion && (
-        <Section gradient="">
-          <FadeIn>
-            <SectionIcon emoji="🎯" />
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">앞선 질문에 대한 답변</h2>
-            <p className="text-gray-600 mb-6">&ldquo;{userQuestion.startsWith('__custom:') ? userQuestion.slice(9) : userQuestion}&rdquo;</p>
-            {aiSections?.['맞춤답변'] ? (
-              <div className="w-full max-w-sm mx-auto bg-white rounded-xl p-4 text-left">
-                <p className="text-sm text-gray-700 leading-relaxed">{aiSections['맞춤답변']}</p>
-              </div>
-            ) : aiLoading ? (
-              <div className="space-y-4">
-                <div className="flex justify-center gap-3">
-                  <div className="w-3 h-3 rounded-full bg-pink-400 dot-1" />
-                  <div className="w-3 h-3 rounded-full bg-pink-400 dot-2" />
-                  <div className="w-3 h-3 rounded-full bg-pink-400 dot-3" />
-                </div>
-                <p className="text-gray-500 text-sm">AI가 답변을 준비하고 있어요...</p>
-              </div>
-            ) : (
-              <p className="text-gray-400 text-sm">잠금해제 후 AI가 답변해드려요</p>
-            )}
-          </FadeIn>
-        </Section>
       )}
 
       {/* 1. 불안형 vs 안정형 */}
+      {currentPage === 'attachment' && (
       <Section gradient="from-purple-950 to-pink-950">
         <FadeIn>
           <SectionIcon emoji="💕" />
@@ -727,12 +756,12 @@ function ResultScreen({
               </>
             );
           })()}
-          <ScrollHint />
         </FadeIn>
       </Section>
+      )}
 
       {/* Paywall Gate */}
-      {!unlocked && (
+      {currentPage === 'paywall' && (
         <Section gradient="from-[#0a0a1a] to-[#12071f]">
           <FadeIn>
             <div className="text-5xl mb-4">🔒</div>
@@ -740,7 +769,7 @@ function ResultScreen({
             <p className="text-gray-400 mb-2">호감도, 선톡, 수면패턴, 응답속도, 읽씹...</p>
             <p className="text-gray-500 text-sm mb-8">+ AI 관계 진단까지 전부 포함</p>
             <button
-              onClick={() => setUnlocked(true)}
+              onClick={() => { setUnlocked(true); setPageIndex(2); }}
               className="bg-pink-400 text-white font-bold px-8 py-3 rounded-full text-base active:scale-[0.98] transition-transform"
             >
               전체 리포트 잠금해제
@@ -756,8 +785,8 @@ function ResultScreen({
         </Section>
       )}
 
-      {unlocked && (<>
       {/* 2. 누가 더 좋아해 */}
+      {currentPage === 'affection' && (
       <Section gradient="from-red-950 to-pink-950">
         <FadeIn>
           <SectionIcon emoji="❤️" />
@@ -819,11 +848,12 @@ function ResultScreen({
               </>
             );
           })()}
-          <ScrollHint />
         </FadeIn>
       </Section>
+      )}
 
       {/* 3. 선톡 */}
+      {currentPage === 'firstMessage' && (
       <Section gradient="from-cyan-950 to-blue-950">
         <FadeIn>
           <SectionIcon emoji="💬" />
@@ -872,11 +902,12 @@ function ResultScreen({
               </>
             );
           })()}
-          <ScrollHint />
         </FadeIn>
       </Section>
+      )}
 
       {/* 4. 수면 패턴 */}
+      {currentPage === 'sleep' && (
       <Section gradient="from-indigo-950 to-slate-950">
         <FadeIn>
           <SectionIcon emoji="😴" />
@@ -928,11 +959,12 @@ function ResultScreen({
               </>
             );
           })()}
-          <ScrollHint />
         </FadeIn>
       </Section>
+      )}
 
       {/* 5. 배고픔 */}
+      {currentPage === 'hungry' && (
       <Section gradient="from-orange-950 to-amber-950">
         <FadeIn>
           <SectionIcon emoji="🍔" />
@@ -978,11 +1010,12 @@ function ResultScreen({
               </>
             );
           })()}
-          <ScrollHint />
         </FadeIn>
       </Section>
+      )}
 
       {/* 6. 계획성 */}
+      {currentPage === 'planner' && (
       <Section gradient="from-emerald-950 to-teal-950">
         <FadeIn>
           <SectionIcon emoji="📋" />
@@ -1026,11 +1059,12 @@ function ResultScreen({
               </>
             );
           })()}
-          <ScrollHint />
         </FadeIn>
       </Section>
+      )}
 
       {/* 7. 응답 속도 */}
+      {currentPage === 'responseTime' && (
       <Section gradient="from-violet-950 to-purple-950">
         <FadeIn>
           <SectionIcon emoji="📱" />
@@ -1079,11 +1113,12 @@ function ResultScreen({
               </>
             );
           })()}
-          <ScrollHint />
         </FadeIn>
       </Section>
+      )}
 
       {/* 8. 시간대 히트맵 */}
+      {currentPage === 'heatmap' && (
       <Section gradient="from-amber-950 to-orange-950">
         <FadeIn>
           <SectionIcon emoji="🕐" />
@@ -1111,11 +1146,12 @@ function ResultScreen({
           </div>
           <Comment text={getComment('heatmap', result)} />
           <SectionShare text={`🕐 시간대 분석: 가장 활발한 시간 ${result.heatmap.peakHour}시!`} />
-          <ScrollHint />
         </FadeIn>
       </Section>
+      )}
 
       {/* 9. 주간 트렌드 */}
+      {currentPage === 'trend' && (
       <Section gradient="from-sky-950 to-cyan-950">
         <FadeIn>
           <SectionIcon emoji="📈" />
@@ -1130,11 +1166,12 @@ function ResultScreen({
             </p>
           </div>
           <SectionShare text={`📈 주간 트렌드: ${a} vs ${b} 매주 대화량 변화!`} />
-          <ScrollHint />
         </FadeIn>
       </Section>
+      )}
 
       {/* 10. 온도 변화 */}
+      {currentPage === 'temperature' && (
       <Section gradient="from-red-950 to-orange-950">
         <FadeIn>
           <SectionIcon emoji="🌡️" />
@@ -1171,11 +1208,12 @@ function ResultScreen({
           </div>
           <Comment text={getComment('temperature', result)} />
           <SectionShare text={`🌡️ 관계 온도: ${a} ${result.temperature.perPerson[a].trend === 'heating' ? '🔥뜨거워지는 중' : result.temperature.perPerson[a].trend === 'cooling' ? '🧊식어가는 중' : '➡️유지 중'} / ${b} ${result.temperature.perPerson[b].trend === 'heating' ? '🔥뜨거워지는 중' : result.temperature.perPerson[b].trend === 'cooling' ? '🧊식어가는 중' : '➡️유지 중'}`} />
-          <ScrollHint />
         </FadeIn>
       </Section>
+      )}
 
       {/* 11. 자주 쓰는 단어 */}
+      {currentPage === 'topWords' && (
       <Section gradient="from-teal-950 to-emerald-950">
         <FadeIn>
           <SectionIcon emoji="🗣️" />
@@ -1216,11 +1254,12 @@ function ResultScreen({
             </p>
           </div>
           <SectionShare text={`🗣️ 자주 쓰는 단어: ${a}의 1위 "${(result.topWords.perPerson[a]?.[0]?.word) || '?'}" / ${b}의 1위 "${(result.topWords.perPerson[b]?.[0]?.word) || '?'}"`} />
-          <ScrollHint />
         </FadeIn>
       </Section>
+      )}
 
       {/* 12. 읽씹 분석 */}
+      {currentPage === 'leftOnRead' && (
       <Section gradient="from-slate-950 to-zinc-950">
         <FadeIn>
           <SectionIcon emoji="👻" />
@@ -1255,11 +1294,12 @@ function ResultScreen({
               </>
             );
           })()}
-          <ScrollHint />
         </FadeIn>
       </Section>
+      )}
 
       {/* 13. AI 관계 분석 */}
+      {currentPage === 'ai' && (
       <Section gradient="from-rose-950 to-fuchsia-950">
         <FadeIn>
           <SectionIcon emoji="🤖" />
@@ -1310,52 +1350,63 @@ function ResultScreen({
               )}
             </div>
           )}
-          <ScrollHint />
+          {/* 공유 버튼 (질문 없으면 AI가 마지막 페이지) */}
+          {!userQuestion && (
+            <div className="flex flex-col gap-3 items-center mt-6">
+              <button
+                onClick={() => { if (navigator.share) { navigator.share({ title: '카톡해킹', text: '카톡 대화를 넣으면 관계를 분석해줘요!', url: window.location.href }); } else { navigator.clipboard.writeText(window.location.href); alert('링크가 복사됐어요!'); } }}
+                className="bg-pink-400 text-white font-bold px-8 py-3 rounded-full text-base active:scale-[0.98] transition-transform"
+              >공유하기</button>
+              <button onClick={() => window.location.reload()} className="text-gray-400 hover:text-gray-600 transition-colors text-sm">다시 분석하기</button>
+            </div>
+          )}
         </FadeIn>
       </Section>
+      )}
 
-      {/* 하단 버튼 */}
-      <div className="flex flex-col gap-3 items-center mt-4 mb-8">
-        <button
-          onClick={() => {
-            if (navigator.share) {
-              navigator.share({
-                title: '카톡해킹 - 카카오톡 대화 분석',
-                text: '카톡 대화를 넣으면 관계를 분석해줘요!',
-                url: window.location.href,
-              });
-            } else {
-              navigator.clipboard.writeText(window.location.href);
-              alert('링크가 복사됐어요!');
-            }
-          }}
-          className="bg-pink-400 text-white font-bold px-8 py-3 rounded-full text-base active:scale-[0.98] transition-transform"
-        >
-          공유하기
-        </button>
-        <button
-          onClick={() => window.location.reload()}
-          className="text-gray-400 hover:text-gray-600 transition-colors text-sm"
-        >
-          다시 분석하기
-        </button>
-      </div>
-
-      {/* 맞춤 답변 (제일 밑) */}
-      {userQuestion && aiSections?.['맞춤답변'] && (
+      {/* 맞춤 답변 (마지막 페이지) */}
+      {currentPage === 'customAnswer' && (
         <Section gradient="">
           <FadeIn>
             <SectionIcon emoji="🎯" />
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">내 질문에 대한 답변</h2>
-            <p className="text-gray-600 mb-6">&ldquo;{userQuestion.startsWith('__custom:') ? userQuestion.slice(9) : userQuestion}&rdquo;</p>
-            <div className="w-full max-w-sm mx-auto bg-white rounded-xl p-4 text-left">
-              <p className="text-sm text-gray-700 leading-relaxed">{aiSections['맞춤답변']}</p>
+            <p className="text-gray-600 mb-6">&ldquo;{userQuestion && (userQuestion.startsWith('__custom:') ? userQuestion.slice(9) : userQuestion)}&rdquo;</p>
+            {aiSections?.['맞춤답변'] ? (
+              <div className="w-full max-w-sm mx-auto bg-white rounded-xl p-4 text-left">
+                <p className="text-sm text-gray-700 leading-relaxed">{aiSections['맞춤답변']}</p>
+              </div>
+            ) : aiLoading ? (
+              <div className="space-y-4">
+                <div className="flex justify-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-pink-400 dot-1" />
+                  <div className="w-3 h-3 rounded-full bg-pink-400 dot-2" />
+                  <div className="w-3 h-3 rounded-full bg-pink-400 dot-3" />
+                </div>
+                <p className="text-gray-500 text-sm">AI가 답변을 준비하고 있어요...</p>
+              </div>
+            ) : (
+              <p className="text-gray-400 text-sm">AI 답변을 불러올 수 없었어요</p>
+            )}
+            <div className="flex flex-col gap-3 items-center mt-6">
+              <button
+                onClick={() => { if (navigator.share) { navigator.share({ title: '카톡해킹', text: '카톡 대화를 넣으면 관계를 분석해줘요!', url: window.location.href }); } else { navigator.clipboard.writeText(window.location.href); alert('링크가 복사됐어요!'); } }}
+                className="bg-pink-400 text-white font-bold px-8 py-3 rounded-full text-base active:scale-[0.98] transition-transform"
+              >공유하기</button>
+              <button onClick={() => window.location.reload()} className="text-gray-400 hover:text-gray-600 transition-colors text-sm">다시 분석하기</button>
             </div>
           </FadeIn>
         </Section>
       )}
 
-      </>)}
+      </div>
+    </div>
+
+      {/* Bottom nav */}
+      <div className="flex-shrink-0 px-5 py-3 border-t border-gray-100">
+        <div className="flex justify-between items-center max-w-md mx-auto">
+          <button onClick={goPrev} disabled={pageIndex === 0} className="text-gray-400 disabled:text-gray-200 text-sm font-medium px-4 py-2">← 이전</button>
+          <button onClick={goNext} disabled={pageIndex === totalPages - 1} className="text-pink-400 disabled:text-gray-200 text-sm font-medium px-4 py-2">다음 →</button>
+        </div>
       </div>
     </div>
   );
