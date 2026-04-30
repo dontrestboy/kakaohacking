@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0C0C1E;
-  --foreground: #ededed;
+  --background: #FFFFFF;
+  --foreground: #1a1a1a;
 }
 
 @theme inline {
@@ -17,7 +17,19 @@ body {
   font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
 }
 
-/* ─── Scroll snap ─── */
+/* ─── Fade-in ─── */
+.fade-up {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.fade-up.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─── Result page: scroll snap (dark mode) ─── */
 .snap-container {
   scroll-snap-type: y mandatory;
   overflow-y: scroll;
@@ -36,18 +48,6 @@ body {
   box-sizing: border-box;
   position: relative;
   overflow: hidden;
-}
-
-/* ─── Fade-in ─── */
-.fade-up {
-  opacity: 0;
-  transform: translateY(30px);
-  transition: opacity 0.7s ease, transform 0.7s ease;
-}
-
-.fade-up.visible {
-  opacity: 1;
-  transform: translateY(0);
 }
 
 /* ─── Scroll indicator ─── */
@@ -70,30 +70,12 @@ body {
 .dot-2 { animation: bounce 1.4s ease-in-out 0.2s infinite; }
 .dot-3 { animation: bounce 1.4s ease-in-out 0.4s infinite; }
 
-/* ─── Subtle float for hero image ─── */
+/* ─── Gentle float ─── */
 @keyframes gentle-float {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  50% { transform: translateY(-6px); }
 }
 
 .gentle-float {
-  animation: gentle-float 5s ease-in-out infinite;
-}
-
-/* ─── Bar animation (result screen) ─── */
-.bar-fill {
-  width: 0%;
-  transition: width 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.bar-fill.animate {
-  width: var(--bar-width);
-}
-
-/* ─── Accent line ─── */
-.accent-line {
-  width: 40px;
-  height: 2px;
-  background: linear-gradient(90deg, #FF6B9D, #A855F7);
-  margin: 0 auto;
+  animation: gentle-float 4s ease-in-out infinite;
 }
