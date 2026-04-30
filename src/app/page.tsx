@@ -291,7 +291,6 @@ function FunnelScreen({
   error: string; onBack: () => void;
 }) {
   const [step, setStep] = useState<'name' | 'gender' | 'question' | 'upload'>('name');
-  const [showGuide, setShowGuide] = useState(false);
   const steps = ['name', 'gender', 'question', 'upload'] as const;
 
   const goBack = () => {
@@ -440,32 +439,39 @@ function FunnelScreen({
 
             {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
-            <button
-              onClick={() => setShowGuide(!showGuide)}
-              className="text-gray-400 hover:text-gray-600 text-xs transition-colors w-full text-center mb-2"
-            >
-              카톡 대화 내보내기 방법 {showGuide ? '접기' : '보기'}
-            </button>
-            {showGuide && (
-              <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-500 space-y-3 mb-4">
-                <div className="flex gap-3">
-                  <span className="bg-pink-400 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
-                  <p>카카오톡에서 분석하고 싶은 <b className="text-gray-700">1:1 대화방</b>을 열어요</p>
+            <p className="text-gray-500 text-xs font-medium mb-3">카톡 대화 내보내기 방법</p>
+              <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-500 mb-4">
+                <p className="text-xs font-bold text-pink-400 mb-2">📱 모바일</p>
+                <div className="space-y-2 mb-4">
+                  <div className="flex gap-3">
+                    <span className="bg-pink-400 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0">1</span>
+                    <p>분석할 <b className="text-gray-700">1:1 대화방</b>을 열어요</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <span className="bg-pink-400 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0">2</span>
+                    <p>우측 상단 <b className="text-gray-700">≡ → 설정(⚙️)</b>을 눌러요</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <span className="bg-pink-400 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0">3</span>
+                    <p><b className="text-gray-700">대화 내보내기 → 텍스트만</b> 저장</p>
+                  </div>
                 </div>
-                <div className="flex gap-3">
-                  <span className="bg-pink-400 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
-                  <p>우측 상단 <b className="text-gray-700">≡ → 설정(톱니바퀴)</b>을 눌러요</p>
-                </div>
-                <div className="flex gap-3">
-                  <span className="bg-pink-400 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
-                  <p><b className="text-gray-700">대화 내보내기</b>를 누르고 <b className="text-gray-700">.txt</b>로 저장해요</p>
-                </div>
-                <div className="flex gap-3">
-                  <span className="bg-pink-400 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
-                  <p>저장된 파일을 위 버튼으로 올려주세요!</p>
+                <p className="text-xs font-bold text-purple-400 mb-2">💻 PC</p>
+                <div className="space-y-2">
+                  <div className="flex gap-3">
+                    <span className="bg-purple-400 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0">1</span>
+                    <p>분석할 <b className="text-gray-700">1:1 대화방</b>을 열어요</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <span className="bg-purple-400 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0">2</span>
+                    <p>우측 상단 <b className="text-gray-700">≡ → 대화 내보내기</b></p>
+                  </div>
+                  <div className="flex gap-3">
+                    <span className="bg-purple-400 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0">3</span>
+                    <p><b className="text-gray-700">.txt 파일</b>로 저장해요</p>
+                  </div>
                 </div>
               </div>
-            )}
 
             <p className="text-center text-gray-300 text-[11px] mt-4">
               모든 분석은 브라우저에서만 이루어져요. 서버 전송 없음.
