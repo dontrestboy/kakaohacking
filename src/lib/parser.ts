@@ -10,6 +10,11 @@ export interface ParseResult {
 }
 
 export function parseKakaoChat(text: string): ParseResult {
+  // CSV format detection
+  if (isCSV(text)) {
+    return parseCSV(text);
+  }
+
   const messages: ChatMessage[] = [];
   const participantSet = new Set<string>();
   const lines = text.split('\n');
@@ -98,6 +103,122 @@ export function parseKakaoChat(text: string): ParseResult {
     participants: Array.from(participantSet),
     messages,
   };
+}
+
+function isCSV(text: string): boolean {
+  const firstLine = text.split('\n')[0].trim();
+  // Check for common CSV headers or comma-separated date pattern
+  return (
+    /^Date,User,Message/i.test(firstLine) ||
+    /^날짜,보낸사람,내용/i.test(firstLine) ||
+    // Headerless CSV: "2024-01-01 13:00:00","Name","msg"
+    /^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}/.test(firstLine.replace(/"/g, ''))
+  );
+}
+
+function parseCSV(text: string): ParseResult {
+  const messages: ChatMessage[] = [];
+  const participantSet = new Set<string>();
+  const lines = text.split('\n');
+
+  // Skip header if present
+  let start = 0;
+  const header = lines[0].trim().toLowerCase();
+  if (
+    header.startsWith('date,') ||
+    header.startsWith('날짜,') ||
+    header.startsWith('"date"')
+  ) {
+    start = 1;
+  }
+
+  for (let i = start; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    const fields = parseCSVLine(line);
+    if (fields.length < 3) continue;
+
+    const [dateStr, sender, content] = fields;
+    if (!sender || !content) continue;
+    if (isSystemMessage(content)) continue;
+
+    const ts = parseCSVDate(dateStr);
+    if (!ts) continue;
+
+    participantSet.add(sender);
+    messages.push({ sender, timestamp: ts, content });
+  }
+
+  return {
+    participants: Array.from(participantSet),
+    messages,
+  };
+}
+
+function parseCSVLine(line: string): string[] {
+  const fields: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"' && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else if (ch === '"') {
+        inQuotes = false;
+      } else {
+        current += ch;
+      }
+    } else {
+      if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ',') {
+        fields.push(current.trim());
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+  }
+  fields.push(current.trim());
+  return fields;
+}
+
+function parseCSVDate(dateStr: string): Date | null {
+  // "2024-01-01 13:00:00" or "2024-01-01 오후 1:00"
+  const iso = dateStr.match(
+    /(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/
+  );
+  if (iso) {
+    return new Date(+iso[1], +iso[2] - 1, +iso[3], +iso[4], +iso[5], +(iso[6] || 0));
+  }
+
+  // Korean AM/PM: "2024-01-01 오후 1:00"
+  const kr = dateStr.match(
+    /(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})\s+(오전|오후)\s*(\d{1,2}):(\d{2})/
+  );
+  if (kr) {
+    let h = +kr[5];
+    if (kr[4] === '오후' && h !== 12) h += 12;
+    if (kr[4] === '오전' && h === 12) h = 0;
+    return new Date(+kr[1], +kr[2] - 1, +kr[3], h, +kr[6]);
+  }
+
+  // Korean date: "2024년 1월 1일 오후 1:00"
+  const krFull = dateStr.match(
+    /(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일\s*(오전|오후)\s*(\d{1,2}):(\d{2})/
+  );
+  if (krFull) {
+    let h = +krFull[5];
+    if (krFull[4] === '오후' && h !== 12) h += 12;
+    if (krFull[4] === '오전' && h === 12) h = 0;
+    return new Date(+krFull[1], +krFull[2] - 1, +krFull[3], h, +krFull[6]);
+  }
+
+  return null;
 }
 
 function buildDate(
